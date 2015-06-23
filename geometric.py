@@ -21,16 +21,13 @@ def dist_sqr(x1, x2):
     :param x2: matrix of M column vectors
     :return: d2 - M x N matrix of square distances
     """
+    if x1.shape[0] != x2.shape[0]:
+        raise ValueError('Vectors must have the same dimension.')
 
-
-
-    [D1,N1] = size(x1);
-[D2,N2] = size(x2);
-
-if D1 ~= D2, error('Vectors must have the same dimension'), end
-
-d2 = (ones(N1,1)*sum(x2.^2, 1))' + ...
-      ones(N2,1)*sum(x1.^2, 1) - ...
-      2.*(x2'*x1);
-
-d2(d2<0) = 0; % ensure rounding errors do not give negative values
+    N1 = x1.shape[1] if len(x1.shape) > 1 else 1
+    N2 = x2.shape[1] if len(x2.shape) > 1 else 1
+    d2 =  np.tile(np.sum(x2*x2,0), (N1,1)).T \
+        + np.tile(np.sum(x1*x1,0), (N2,1))   \
+        - 2 * np.dot(x2.T, x1)
+    d2[d2<0] = 0 # Ensure rounding errors do not give negative values
+    return d2
