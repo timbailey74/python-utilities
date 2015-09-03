@@ -35,10 +35,20 @@ import shutil
 
 #
 def join_path(base, d):
+    """
+    Form path base/d while dealing correctly with multiple or absent backslashes etc.
+    INPUTS:
+        base - base path
+        d - additional directory or file-name defined relative to base
+    RETURNS: combined path
+    """
     return os.path.normpath(os.path.join(base, d))
 
 #
 def join_path_list(pathlist):
+    """
+    Join list of paths (ordered base-most first) into a single combined path.
+    """
     path = ''
     for p in pathlist:
         path = join_path(path, p)
@@ -46,6 +56,15 @@ def join_path_list(pathlist):
 
 #
 def files_and_dirs(pathname, names=None):
+    """
+    Get the names of all files and directories in path-directory.
+    INPUTS:
+        pathname - path to directory of interest
+        names - (optional) list of subset of names in directory
+    RETURNS:
+        files - list of names of files
+        dirs - list of names of directories
+    """
     if not names:
         names = os.listdir(pathname)
     files, dirs = [], []
@@ -80,31 +99,55 @@ class DirectoryTree:
         for dchild in dlist:
             self.__tree_recurse(fulldir, dchild, depth+1, filekey)
 
-def search_sorted_duplicates(flist, icomp):
+    def get_path(self, key):
+        # form full path from key
+        return join_path_list([self.dirlist[i] for i in key])
+
+    def get_file_path(self, key, filenum):
+        # Get full path-and-filename to specified file
+        return join_path(self.get_path(key), self.filedict[key][filenum])
+
+def find_duplicate_attribute(dirtree, isname):
+    flist = []
+    # List all files by (key, index, attribute)
+    for k in dirtree.filedict.keys():
+        if isname: # find duplicate names
+            flist += [(k, i, f) for (i,f) in enumerate(dirtree.filedict[k])]
+        else: # find duplicate sizes
+            path = dirtree.get_path(k)
+            getsize = lambda x: os.stat(join_path(path, x)).st_size
+            flist += [(k, i, getsize(f)) for (i,f) in enumerate(dirtree.filedict[k])]
+    # Sort files by attribute
+    flist = sorted(flist, key=lambda x: x[-1])
+    # Collect duplicate attributes
     i, dups = 0, list()
     while i < len(flist):
         j = i + 1
-        while j < len(flist) and flist[i][icomp] == flist[j][icomp]:
+        while j < len(flist) and flist[i][-1] == flist[j][-1]:
             j += 1
         if j - i > 1:
-            dups += [(flist[i][0], [f[-1] for f in flist[i:j]])]
+            dups += [[(k, i) for (k,i,_) in flist[i:j]]]
         i = j
     return dups
 
-def find_duplicate_names_in_tree(dirtree):
-    flist = []
-    for k in dirtree.filedict.keys():
-        flist += [(f, k) for f in dirtree.filedict[k]]
-    flist.sort()
-    return search_sorted_duplicates(flist, 0)
+# Graph-type data-structure of linked objects
+class Neighbour:
+    def __init__(self, lists):
+        pass
 
-def find_duplicate_size_in_tree(dirtree):
-    flist = []
-    for k in dirtree.filedict.keys():
-        path = join_path_list([dirtree.dirlist[i] for i in k]) # form full path
-        flist += [(f, os.stat(join_path(path,f)).st_size, k) for f in dirtree.filedict[k]]
-    flist = sorted(flist, key=lambda x: x[1])
-    return search_sorted_duplicates(flist, 1)
+
+# Return set of files that are (i) same name and identical, (ii) same name but
+# different, and (iii) different name but identical binary.
+def find_duplicates(dirtree):
+    samename = find_duplicate_attribute(dirtree, True)
+    samesize = find_duplicate_attribute(dirtree, False)
+    identical, nameonly, namediff = list(), list(), list()
+    # Need a graph data-structure to link things that are different to all the things that share a common attribute
+
+# Find files that are: same, different, right-only, left-only
+#   - for "different" want to show stats: (most recent, biggest, num of zeros, etc)
+def compare_directories(d1, d2):
+    pass
 
 #
 # Tests
@@ -120,8 +163,8 @@ def test_create_dirtree(dir):
 
 def test_find_duplicates_in_tree(dir):
     dt = DirectoryTree(dir)
-    dups_name = find_duplicate_names_in_tree(dt)
-    dups_size = find_duplicate_size_in_tree(dt)
+    dups_name = find_duplicate_attribute(dt, True)
+    dups_size = find_duplicate_attribute(dt, False)
     print('Names: ', dups_name)
     print('Sizes: ', dups_size)
 
