@@ -20,3 +20,12 @@ def repcol_(x, N):
 
 def repcol(x, N):
     return np.outer(x, np.ones(N))
+
+class Scale:
+    def __init__(self, mean, sigma):
+        self.mean = np.array(mean)
+        self.sigma = np.array(sigma)
+    def scale(self, x):
+        return (x - self.mean) / self.sigma
+    def unscale(self, sx):
+        return self.mean + sx*self.sigma
