@@ -1,6 +1,7 @@
 # File and directory management and manipulation, including synchronisation.
 import sys
 import os
+import filecmp
 #from pathlib import Path
 import shutil
 
@@ -100,8 +101,12 @@ class DirectoryTree:
             self.__tree_recurse(fulldir, dchild, depth+1, filekey)
 
     def get_path(self, key):
-        # form full path from key
+        # Form full path from key
         return join_path_list([self.dirlist[i] for i in key])
+
+    def get_filename(self, key, filenum):
+        # Get local filename from key and file-index
+        return self.filedict[key][filenum]
 
     def get_file_path(self, key, filenum):
         # Get full path-and-filename to specified file
@@ -130,15 +135,35 @@ def find_duplicate_attribute(dirtree, isname):
         i = j
     return dups
 
+# Find all files that have identical binaries
+def find_duplicates(dirtree, dup_attrib):
+    duplicates = list()
+    for names in dup_attrib:
+        # Within this set of matching-attribute files, there may be subgroups of identical binaries
+        N = len(names)
+        mark = [False] * N  # marker for already-grouped files
+        fullname = [dirtree.get_file_path(*n) for n in names] # get set of full-path names
+        for i in range(N):
+            if mark[i]: continue  # i is already in a group, so move on
+            mark[i] = True  # create new group
+            group = [names[i]]
+            for j in range(i+1, N): # seek to add files to group
+                if mark[j]: continue # j is already in a group, move on
+                if filecmp.cmp(fullname[i], fullname[j]):
+                    mark[j] = True # binary match, add to group
+                    group.append(names[j])
+        if len(group) > 1:
+            duplicates.append(group)
+    return duplicates
+
 # Graph-type data-structure of linked objects
 class Neighbour:
     def __init__(self, lists):
         pass
 
 
-# Return set of files that are (i) same name and identical, (ii) same name but
-# different, and (iii) different name but identical binary.
-def find_duplicates(dirtree):
+# Return set of files that are (i) same name but different, and (ii) different name but identical binary.
+def find_not_duplicates(dirtree):
     samename = find_duplicate_attribute(dirtree, True)
     samesize = find_duplicate_attribute(dirtree, False)
     identical, nameonly, namediff = list(), list(), list()
@@ -167,6 +192,8 @@ def test_find_duplicates_in_tree(dir):
     dups_size = find_duplicate_attribute(dt, False)
     print('Names: ', dups_name)
     print('Sizes: ', dups_size)
+    dups_bin = find_duplicates(dt, dups_name)
+    print('Binaries: ', dups_bin)
 
 if __name__ == '__main__':
     dir1 = os.getcwd() if len(sys.argv) == 1 else sys.argv[1]
