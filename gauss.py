@@ -95,7 +95,7 @@ def chi_square_mass(x,n):
     :param n:
     :return:
     """
-    return sp.gammainc(x/2, n/2)
+    return sp.gammainc(n/2, x/2)
 
 #
 # Tests
