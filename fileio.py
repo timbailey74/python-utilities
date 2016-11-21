@@ -55,6 +55,11 @@ def join_path_list(pathlist):
         path = join_path(path, p)
     return path
 
+# FIXME: redundant?
+def list_filenames(dir):
+    return [n for n in os.listdir(dir) if os.path.isfile(join_path(dir, n))]
+
+
 #
 def files_and_dirs(pathname, names=None):
     """
